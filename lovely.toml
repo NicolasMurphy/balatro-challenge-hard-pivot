@@ -1,0 +1,173 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.module]
+source = 'nativefs.lua'
+before = 'main.lua'
+name = 'nativefs'
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "self:load_profile(G.SETTINGS.profile or 1)"
+position = "after"
+payload = "initChallenges()"
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.copy]
+target = "main.lua"
+position = "append"
+sources = ["mod.lua"]
+
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+pattern = "function init_localization()"
+position = "after"
+payload = 'ChallengeMod.addLocalization()'
+match_indent = true
+overwrite = false
+
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "if v.eternal then _joker:set_eternal(true) end"
+position = "after"
+payload = """
+if v.perishable then _joker:set_perishable(true) end
+if v.rental then _joker:set_rental(true) end
+if v.debuff then 
+	_joker.debuff = true
+	_joker.ability.perishable = true
+	_joker.ability.perish_tally = 0
+end
+"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+pattern = "if (area == G.shop_jokers) or (area == G.pack_cards) then"
+position = "before"
+payload = '''
+if G.GAME.modifiers.all_perishable then
+  card:set_perishable(true)
+end
+if G.GAME.modifiers.all_rental then
+  card:set_rental(true)
+end
+'''
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = 'elseif v.value then'
+position = "before"
+payload = """
+elseif v.id == 'cm_noshop' then
+  self.GAME.modifiers.cm_noshop = true
+elseif v.id == 'cm_scaling' then
+  self.GAME.modifiers.cm_scaling = v.value
+elseif v.id == 'cm_stake' then
+  ChallengeMod.custom_stake(v.value)
+elseif v.id == 'all_perishable' then
+  self.GAME.modifiers.all_perishable = true
+elseif v.id == 'all_rental' then
+  self.GAME.modifiers.all_rental = true
+elseif v.id == 'no_shop_planets' then
+  self.GAME.planet_rate = 0
+elseif v.id == 'no_shop_tarots' then
+  self.GAME.tarot_rate = 0
+elseif v.id == 'cm_all_facedown' then
+  self.GAME.modifiers.cm_all_facedown = true
+"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = "if v.pinned then"
+position = "before"
+payload = '''
+if v.rental then card:set_rental(true) end
+if v.perishable then card:set_perishable(true) end
+'''
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = """game_rules[#game_rules+1] = {n=G.UIT.R, config={align = "cl"}, nodes= localize{type = 'text', key = 'ch_c_'..v.id, vars = {v.value}}}"""
+position = "at"
+payload = """game_rules[#game_rules+1] = {n=G.UIT.R, config={align = "cl"}, nodes= localize{type = 'text', key = 'ch_c_'..v.id, vars = {v.value, v.name}}}"""
+match_indent = true
+overwrite = true
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = 'function Game:update_shop(dt)'
+position = "after"
+payload = """
+if G.GAME.modifiers.cm_noshop then
+  return Game:update_blind_select(dt)
+end
+"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "nuGC(nil, nil, true)"
+position = "after"
+payload = """
+if G.GAME.modifiers.cm_all_facedown == true then G.debug_tooltip_toggle = true else G.debug_tooltip_toggle = false end
+"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = """self.facing = 'front'"""
+position = "after"
+payload = """if G.GAME.modifiers.cm_all_facedown == true then
+self.facing = 'back' end"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = """self.sprite_facing = 'front'"""
+position = "after"
+payload = """if G.GAME.modifiers.cm_all_facedown == true then
+self.sprite_facing = 'back' end"""
+match_indent = true
+overwrite = false
+
+[[patches]]
+[patches.pattern]
+target = "cardarea.lua"
+pattern = "local stay_flipped = G.GAME and G.GAME.blind and G.GAME.blind:stay_flipped(self, card)"
+position = "before"
+payload = """
+if G.GAME.modifiers.cm_all_facedown == true then
+card.facing = 'front'
+card.sprite_facing = 'front'
+end
+"""
+match_indent = true
+overwrite = false
